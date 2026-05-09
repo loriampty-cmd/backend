@@ -144,3 +144,6 @@ prisma/dev.db
 prisma/dev.db-journal
 uploads/*
 !uploads/.gitkeep
+Dockerfile
+docker-compose.yml
+compose.yaml
