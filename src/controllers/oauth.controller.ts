@@ -39,7 +39,23 @@ export async function googleLogin(req: Request, res: Response) {
         "https://www.googleapis.com/auth/userinfo.email",
       ],
       state,
+      redirect_uri: env.GOOGLE_CALLBACK_URL, 
     });
+// export async function googleLogin(req: Request, res: Response) {
+//   try {
+//     const { referralCode } = req.query;
+
+//     // Store referral code in state parameter to preserve it through OAuth flow
+//     const state = referralCode ? JSON.stringify({ referralCode }) : undefined;
+
+//     const authorizeUrl = googleClient.generateAuthUrl({
+//       access_type: "offline",
+//       scope: [
+//         "https://www.googleapis.com/auth/userinfo.profile",
+//         "https://www.googleapis.com/auth/userinfo.email",
+//       ],
+//       state,
+//     });
 
     return res.redirect(authorizeUrl);
   } catch (err) {
