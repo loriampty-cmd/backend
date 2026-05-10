@@ -155,6 +155,26 @@ export function emitSessionRevoked(userId: string): void {
 }
 
 /**
+ * Revoke specific socket IDs only (not all sockets for a user)
+ * Used to avoid revoking the newly connected session
+ */
+export function emitSessionRevokedToSockets(socketIds: string[]): void {
+  if (!io) return;
+  for (const socketId of socketIds) {
+    io.to(socketId).emit("session_revoked", {});
+  }
+}
+
+/**
+ * Get all current socket IDs for a user (snapshot before new login)
+ */
+export function getUserSocketIds(userId: string): string[] {
+  const sockets = userSockets.get(userId);
+  if (!sockets || sockets.size === 0) return [];
+  return Array.from(sockets);
+}
+
+/**
  * Broadcast an event to every connected socket (used for admin notifications like new WA tickets)
  */
 export function emitToAll(event: string, data: unknown): void {

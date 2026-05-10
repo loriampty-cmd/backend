@@ -37,6 +37,11 @@ app.use(
       // Allow configured frontend URL
       if (origin === env.FRONTEND_URL) return callback(null, true);
 
+      if (origin === `www.${env.FRONTEND_URL.replace("https://", "")}` || 
+    origin === `https://www.alvaradoassociatepartners.com`) {
+  return callback(null, true);
+}
+
       // Allow Vercel deployments (production + preview branches)
       if (origin.endsWith(".vercel.app")) {
         return callback(null, true);
@@ -59,6 +64,7 @@ app.use(
       callback(new Error(`Origin ${origin} not allowed by CORS`));
     },
     credentials: true,
+    exposedHeaders: ["set-cookie"],
   })
 );
 

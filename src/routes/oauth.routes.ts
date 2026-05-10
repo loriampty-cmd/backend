@@ -5,6 +5,6 @@ const router = Router();
 
 // Google OAuth routes
 router.get("/google", googleLogin);
-router.get("/google/callback", googleCallback);
+router.get("/callback/google", googleCallback);
 
 export default router;

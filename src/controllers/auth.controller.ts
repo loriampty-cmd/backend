@@ -16,7 +16,8 @@ import { env } from "../config/env.js";
 import { setAuthCookies, setAccessTokenCookie, clearAuthCookies, getRefreshTokenFromCookies } from "../utils/cookies.js";
 import { verify2FACode } from "./twoFactor.controller.js";
 import { parseUserAgent } from "../utils/userAgent.js";
-import { emitSessionRevoked } from "../services/socket.service.js";
+// import { emitSessionRevoked } from "../services/socket.service.js";
+import { emitSessionRevoked, emitSessionRevokedToSockets, getUserSocketIds } from "../services/socket.service.js";
 
 // Grace period for token rotation — allows concurrent/delayed requests from mobile browsers
 const TOKEN_ROTATION_GRACE_MS = 60 * 1000; // 60 seconds
@@ -463,23 +464,26 @@ export async function forceLogin(req: Request, res: Response) {
       return success(res, { user, accessToken });
     }
 
-    // Invalidate ALL existing active sessions (force logout from all devices)
-    const invalidatedSessions = await prisma.session.updateMany({
-      where: {
-        userId: user.id,
-        isActive: true,
-      },
-      data: {
-        isActive: false,
-      },
-    });
+    // Before invalidating — snapshot the OLD socket IDs
+const oldSocketIds = getUserSocketIds(user.id);
 
-    console.log(`🚪 Force login: Invalidated ${invalidatedSessions.count} existing session(s) for ${normalizedEmail}`);
+// Invalidate ALL existing active sessions
+const invalidatedSessions = await prisma.session.updateMany({
+  where: {
+    userId: user.id,
+    isActive: true,
+  },
+  data: {
+    isActive: false,
+  },
+});
 
-    // Push instant logout to any connected sockets on the old device
-    if (invalidatedSessions.count > 0) {
-      emitSessionRevoked(user.id);
-    }
+console.log(`🚪 Force login: Invalidated ${invalidatedSessions.count} existing session(s) for ${normalizedEmail}`);
+
+// Only emit to OLD sockets — not the new session being created right now
+if (invalidatedSessions.count > 0 && oldSocketIds.length > 0) {
+  emitSessionRevokedToSockets(oldSocketIds);
+}
 
     // Get device info for new session
     const { device, browser, deviceModel, os, osVersion } = parseUserAgent(req.headers["user-agent"]);
@@ -756,12 +760,15 @@ export async function verify2FALogin(req: Request, res: Response) {
 
     // If force login, invalidate all existing sessions
     if (isForceLogin) {
+      // Snapshot old socket IDs before invalidating
+const oldSocketIds = getUserSocketIds(user.id);
       const invalidated = await prisma.session.updateMany({
         where: { userId: user.id, isActive: true },
         data: { isActive: false },
       });
-      if (invalidated.count > 0) {
-        emitSessionRevoked(user.id);
+      // Only revoke OLD sockets, not the new login
+      if (invalidated.count > 0 && oldSocketIds.length > 0) {
+        emitSessionRevokedToSockets(oldSocketIds);
       }
     } else {
       // Check for existing active sessions (Single-Device Login Security)
