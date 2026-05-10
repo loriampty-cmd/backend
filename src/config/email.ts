@@ -7,15 +7,17 @@ import { createTransport } from "nodemailer";
 export const transporter = createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
   port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: process.env.SMTP_SECURE === "true", // false for port 587 (STARTTLS)
+  secure: process.env.SMTP_SECURE === "true",
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
-  // Generous timeouts — Gmail connects reliably from any server
-  connectionTimeout: 10000, // 10 seconds
+  connectionTimeout: 10000,
   greetingTimeout: 10000,
-  socketTimeout: 30000, // 30 seconds for large emails
+  socketTimeout: 30000,
+} as any, {
+  // Force IPv4 — Railway doesn't support IPv6
+  family: 4,
 });
 
 // Verify connection configuration (async, non-blocking)
